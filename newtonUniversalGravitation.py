@@ -1,116 +1,100 @@
 import math 
 import pygame 
 
-
 pygame.init()
 screen = pygame.display.set_mode((1280, 720))
 clock = pygame.time.Clock()
 running = True
 dt = 0
+G = 6.67430e-11 ##gravitational constant 
+G = 1000 ## for visual effects as the other one is too small 
 
-
-## TODO: add a class object for bodies of mass
-
-## Class to define the nth body
-## no initial velocity, but constant dowward acceleratio going at 500 pixels per second, default mimicks earth's gravity
 class Body: 
     def __init__(self, pos, mass=None, radius = 40, velocity=None, acceleration=None):
         self.pos = pygame.Vector2(pos)
         self.mass = mass if mass is not None else radius
         self.radius = radius 
         self.velocity = velocity if velocity is not None else pygame.Vector2(0,0)
-        self.acceleration = acceleration if acceleration is not None else pygame.Vector2(0, 500)
+        self.acceleration = pygame.Vector2(0,0)
         self.bounce_damping = 0.8
+
+    def calculate_gravitational_force(self, other_body): 
+        ## logic to calculate gravitational force between 2 objects
+
+        directional_vector = other_body.pos - self.pos
+        dist = directional_vector.length()
+
+        if dist < self.radius + other_body.radius: ## to avoid collision, could also just make them explode at contact
+            dist = self.radius + other_body.radius
+        
+        ## Newton's Law of Universal Gravitation F_g = (G * m1m2) / distance^2 
+        force_magnitude = (G * self.mass * other_body.mass) / (dist ** 2)
+
+        if dist > 0: 
+            force_direction = directional_vector / dist
+        else: 
+            force_direction =  pygame.Vector2(0,0) 
+        
+        ## force vector 
+        force_vector = force_direction * force_magnitude
+
+        ## F = ma, so a = F / m 
+        accelGravity = force_vector / self.mass
+
+        self.acceleration += accelGravity
     
+    def reset_acceleration(self):  # Fixed typo in method name
+        ## acceleration set to 0 before calculating any forces 
+        self.acceleration = pygame.Vector2(0,0)
+
     def updatePos(self, dt, screen_width, screen_height): 
         self.velocity += self.acceleration * dt 
         self.pos += self.velocity * dt
 
-        # Bounce off bottom
-        if self.pos.y + self.radius >= screen_height:
-            self.pos.y = screen_height - self.radius
-            self.velocity.y = -self.velocity.y * self.bounce_damping
-
-        # Bounce off top
-        if self.pos.y - self.radius <= 0:
-            self.pos.y = self.radius
-            self.velocity.y = -self.velocity.y * self.bounce_damping
-
-        # Bounce off right
-        if self.pos.x + self.radius >= screen_width:
-            self.pos.x = screen_width - self.radius
-            self.velocity.x = -self.velocity.x * self.bounce_damping
-
-        # Bounce off left
-        if self.pos.x - self.radius <= 0:
-            self.pos.x = self.radius
-            self.velocity.x = -self.velocity.x * self.bounce_damping
 
     def drawCircle(self, screen): 
+        ## body
         pygame.draw.circle(screen, "white", self.pos, self.radius)
 
-player_pos = pygame.Vector2(screen.get_width() / 2, screen.get_height() / 4)
-
-
-
 ## make the object class and draw the same circle on screen but as an object of the class...
-bodies = [Body((300, 100)),
-Body((600, 50)), Body((900, 150), radius=30), Body((600, 80), velocity=(400, 0))]
+bodies = [
+    Body((300, 300), mass=8000, radius=40, velocity=pygame.Vector2(0, -50)),
+    Body((900, 300), mass=8000, radius=40, velocity=pygame.Vector2(0, 50))
+]  
 
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_r:  # Reset simulation
+                bodies = [
+                    Body((300, 300), mass=5000, radius=30, velocity=pygame.Vector2(0, -50)),
+                    Body((900, 300), mass=8000, radius=40, velocity=pygame.Vector2(0, 50)),
+                    Body((600, 150), mass=2000, radius=20, velocity=pygame.Vector2(30, 0))
+                ]
+    
     screen.fill("black")
+    
+    ## all accelerations set to 0
+    for body in bodies:
+        body.reset_acceleration() 
 
-## collision between bodies
+    ## Calculate gravitational forces between all pairs
     for i in range(len(bodies)):
         for j in range(i + 1, len(bodies)):
             b1 = bodies[i]
             b2 = bodies[j]
 
-            n = b1.pos - b2.pos ## vector from p2 to p1 to see the vector on which the collision happens 
-            dist = n.length()
-            min_dist = b1.radius + b2.radius 
+            # Apply gravitational force from b2 to b1
+            b1.calculate_gravitational_force(b2)
+            # Apply equal and opposite force from b1 to b2 (Newton's 3rd law)
+            b2.calculate_gravitational_force(b1)
 
-            ## if the distance between the 2 objects is less than the sum of the radii then collsion happens
-            if dist < min_dist: ## collision happens
-                if dist == 0:
-                    dist == 0.01 ## avoid division by 0
-            
-                ## normalize the collision axis 
-                normal = n / dist
-
-                ## calcualte the relative velocity
-                rel_velocity = b1.velocity - b2.velocity ## how fast b1 is going towards b2 
-                vel_along_normal = rel_velocity.dot(normal)
-                ## dot product gives you the magnitude of relative velocity along the axis
-                ## if negative it means they're going towards each other, positive meaning away, zero being parallel
-
-                ## in case they're moving away from each other
-                if vel_along_normal > 0: 
-                    continue
-
-                # compute impulse
-                m1, m2 = b1.mass, b2.mass
-                impulse = (2 * vel_along_normal) / (m1 + m2) 
-
-                ## Apply the impluse to both velocites
-                b1.velocity -= (impulse * m2) * normal 
-                b2.velocity += (impulse * m1) * normal
-
-
-                # push bodies apart to avoid voerlap
-                overlap = min_dist - dist 
-                correction = normal * (overlap / (m1 + m2)) 
-                b1.pos += correction * m2 
-                b2.pos -= correction * m1
-
-
+    # Update positions and draw bodies
     for body in bodies:
         body.updatePos(dt, screen.get_width(), screen.get_height())
         body.drawCircle(screen)
-
     
     # flip() the display to put your work on screen
     pygame.display.flip()
