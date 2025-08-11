@@ -17,6 +17,7 @@ class Body:
         self.velocity = velocity if velocity is not None else pygame.Vector2(0,0)
         self.acceleration = pygame.Vector2(0,0)
         self.bounce_damping = 0.8
+        self.trail = []  # For drawing motion trails
 
     def calculate_gravitational_force(self, other_body): 
         ## logic to calculate gravitational force between 2 objects
@@ -51,16 +52,34 @@ class Body:
         self.velocity += self.acceleration * dt 
         self.pos += self.velocity * dt
 
+        # Add current position to trail
+        self.trail.append(self.pos.copy())
+        if len(self.trail) > 100:  # Limit trail length
+            self.trail.pop(0)
+
 
     def drawCircle(self, screen): 
+
+        # Draw trail
+        if len(self.trail) > 1:
+            for i in range(1, len(self.trail)):
+                alpha = i / len(self.trail)
+                trail_radius = max(1, int(self.radius * alpha * 0.3))
+                trail_color = (int(255 * alpha), int(255 * alpha), int(255 * alpha))
+                pygame.draw.circle(screen, trail_color, self.trail[i], trail_radius)
+        
         ## body
         pygame.draw.circle(screen, "white", self.pos, self.radius)
 
+        # Draw a smaller circle to show the center
+        pygame.draw.circle(screen, "red", self.pos, 3)
+
 ## make the object class and draw the same circle on screen but as an object of the class...
 bodies = [
-    Body((300, 300), mass=8000, radius=40, velocity=pygame.Vector2(0, -50)),
-    Body((900, 300), mass=8000, radius=40, velocity=pygame.Vector2(0, 50))
-]  
+        Body((300, 300), mass=5000, radius=30, velocity=pygame.Vector2(0, -50)),
+        Body((900, 300), mass=8000, radius=40, velocity=pygame.Vector2(0, 50)),
+        Body((600, 150), mass=2000, radius=20, velocity=pygame.Vector2(30, 0))
+        ]
 
 while running:
     for event in pygame.event.get():
