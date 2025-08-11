@@ -1,4 +1,3 @@
-import math 
 import pygame 
 
 pygame.init()
@@ -60,7 +59,7 @@ class Body:
 
     def drawCircle(self, screen): 
 
-        # Draw trail
+        # Draw trail -- don't rlly worry abt how this works, this is just to show the path they are affected and not really relevant to concept at hand
         if len(self.trail) > 1:
             for i in range(1, len(self.trail)):
                 alpha = i / len(self.trail)
