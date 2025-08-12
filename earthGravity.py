@@ -1,4 +1,3 @@
-import math 
 import pygame 
 
 
@@ -50,7 +49,6 @@ class Body:
         pygame.draw.circle(screen, "white", self.pos, self.radius)
 
 player_pos = pygame.Vector2(screen.get_width() / 2, screen.get_height() / 4)
-
 
 
 ## make the object class and draw the same circle on screen but as an object of the class...
