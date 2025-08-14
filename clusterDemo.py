@@ -10,7 +10,7 @@ running = True
 dt = 0
 G = 5000  # Scaled gravitational constant
 
-class CelestialBody: 
+class CelestialBody:   
     def __init__(self, name, pos, mass, radius, velocity=None, color="white"):
         self.name = name
         self.pos = pygame.Vector2(pos)
